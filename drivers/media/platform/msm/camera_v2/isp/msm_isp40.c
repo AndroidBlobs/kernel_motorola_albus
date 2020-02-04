@@ -755,11 +755,11 @@ static void msm_vfe40_process_epoch_irq(struct vfe_device *vfe_dev,
 		return;
 
 	if (irq_status0 & BIT(2)) {
-		msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
 		ISP_DBG("%s: EPOCH0 IRQ\n", __func__);
 		msm_isp_update_framedrop_reg(vfe_dev, VFE_PIX_0);
 		msm_isp_update_stats_framedrop_reg(vfe_dev);
 		msm_isp_update_error_frame_count(vfe_dev);
+		msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].raw_stream_count > 0
 			&& vfe_dev->axi_data.src_info[VFE_PIX_0].
 			pix_stream_count == 0) {
@@ -1535,7 +1535,6 @@ static void msm_vfe40_update_camif_state(struct vfe_device *vfe_dev,
 		msm_camera_io_w_mb((update_state == DISABLE_CAMIF ? 0x0 : 0x6),
 				vfe_dev->vfe_base + 0x2F4);
 		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 0;
-		vfe_dev->axi_data.src_info[VFE_PIX_0].flag = 0;
 		/* testgen OFF*/
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].input_mux == TESTGEN)
 			msm_camera_io_w(1 << 1, vfe_dev->vfe_base + 0x93C);
@@ -1813,7 +1812,8 @@ static int msm_vfe40_axi_restart(struct vfe_device *vfe_dev,
 	/* Start AXI */
 	msm_camera_io_w(0x0, vfe_dev->vfe_base + 0x2C0);
 
-	msm_vfe40_config_irq(vfe_dev, vfe_dev->recovery_irq0_mask,
+	if (vfe_dev->recovery_irq0_mask || vfe_dev->recovery_irq1_mask)
+		msm_vfe40_config_irq(vfe_dev, vfe_dev->recovery_irq0_mask,
 		vfe_dev->recovery_irq1_mask, MSM_ISP_IRQ_SET);
 
 	vfe_dev->hw_info->vfe_ops.core_ops.reg_update(vfe_dev, VFE_SRC_MAX);
